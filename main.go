@@ -18,84 +18,83 @@ import (
 		{".", ".", ".", ".", ".", ".", ".", "."},
 		{".", ".", ".", ".", ".", ".", ".", "."},
 	}
+	directions := [][]int{
+		{0, 1}, // right
+		{0, -1}, // left
+		{1, 0}, // up
+		{-1, 0}, // down
+		{1, 1}, // up right
+		{1, -1}, // up left
+		{-1, 1}, // down right
+		{-1, -1}, // down left
+	}
 
 	printBoard(board)
-	changeBoard("f5", "x", &board)
-	changeBoard("f6", "o", &board)
 	changeBoard("e6", "x", &board)
 	changeBoard("f4", "o", &board)
-	changeBoard("e3", "x", &board)
-	changeBoard("d2", "o", &board)
-	changeBoard("g7", "x", &board)
-	changeBoard("h8", "o", &board)
-	changeBoard("d3", "x", &board)
-	changeBoard("c2", "o", &board)
-	changeBoard("g6", "x", &board)
+	changeBoard("g3", "x", &board)
 	changeBoard("c6", "o", &board)
-	changeBoard("f2", "x", &board)
-	changeBoard("h7", "o", &board)
-	changeBoard("c1", "x", &board)
-	changeBoard("d7", "o", &board)
-	changeBoard("h6", "x", &board)
-	changeBoard("d1", "o", &board)
-	changeBoard("b1", "x", &board)
-	changeBoard("a1", "o", &board)
-	changeBoard("g8", "x", &board)
-	changeBoard("b2", "o", &board)
-	changeBoard("c8", "x", &board)
-	changeBoard("h5", "o", &board)
-	changeBoard("b5", "x", &board)
-	changeBoard("e2", "o", &board)
-	changeBoard("a2", "x", &board)
-	changeBoard("g1", "o", &board)
-	changeBoard("g2", "x", &board)
-	changeBoard("a3", "o", &board)
-	changeBoard("g4", "x", &board)
-	changeBoard("h2", "o", &board)
-	changeBoard("f1", "x", &board)
-	changeBoard("f8", "o", &board)
-	changeBoard("h1", "x", &board)
-	changeBoard("b7", "o", &board)
-	changeBoard("a8", "x", &board)
-	changeBoard("g5", "o", &board)
-	changeBoard("h3", "x", &board)
-	changeBoard("e1", "o", &board)
-	changeBoard("h4", "x", &board)
-	changeBoard("c5", "o", &board)
-	changeBoard("c4", "x", &board)
-	changeBoard("a5", "o", &board)
-	changeBoard("a6", "x", &board)
-	changeBoard("a7", "o", &board)
-	changeBoard("f3", "x", &board)
-	changeBoard("f7", "o", &board)
-	changeBoard("d6", "x", &board)
-	changeBoard("b3", "o", &board)
-	changeBoard("a4", "x", &board)
-	changeBoard("d8", "o", &board)
-	changeBoard("c3", "x", &board)
-	changeBoard("g3", "o", &board)
-	changeBoard("e8", "x", &board)
-	changeBoard("b8", "o", &board)
-	changeBoard("c7", "x", &board)
-	changeBoard("e7", "o", &board)
-	fmt.Println("e7")
-	printBoard(board)
-	changeBoard("b6", "o", &board)
-	fmt.Println("b6")
-	printBoard(board)
-	changeBoard("b4", "o", &board)
-	fmt.Println("b4")
-	printBoard(board)
+	legalMoves := findLegalMoves(directions, "x", &board)
+	for _, move := range legalMoves {
+		fmt.Println(IndToAlg(move[0], move[1]))
+	}
  }
 
  func printBoard(board [][]string) {
-	for _, line := range board {
+	fmt.Println("  0 1 2 3 4 5 6 7")
+	for i, line := range board {
+		fmt.Print(i, " ")
 		for _, square := range line {
 			fmt.Print(square)
 			fmt.Print(" ")
 		}
 		fmt.Println()
 	}
+ }
+
+ func findLegalMoves(directions [][]int, color string, board *[][]string) [][]int {
+	var legalMoves [][]int
+
+	for i, row := range *board {
+		for j, square := range row {
+			//fmt.Printf("i=%d, j=%d, row=%v, square=%s, square==. - %t, legal=%t\n", i, j, row, square, square==".", isLegalMove(directions, i, j, color, board))
+			if square == "." && isLegalMove(directions, i, j, color, board){
+				legalMoves = append(legalMoves, []int{i, j})
+			}
+		}
+	}
+
+	return legalMoves
+ }
+
+ func isLegalMove(directions [][]int, ind1 int, ind2 int, color string, board *[][]string) bool {
+	var iPlus, jPlus, i, j int
+	var opponentInBetween bool
+
+	for _, direction := range directions {
+		iPlus = direction[0]
+		jPlus = direction[1]
+		i = ind1 + iPlus
+		j = ind2 + jPlus
+		opponentInBetween = false
+		
+		for i >= 0 && i <= 7 && j >= 0 && j <= 7 {
+			square := (*board)[i][j]
+			if square == "." {
+				break
+			} else if square != color {
+				opponentInBetween = true
+				i += iPlus
+				j += jPlus
+			} else if opponentInBetween {
+				return true
+			} else {
+				break
+			}
+		}
+	}
+
+	return false
  }
 
  func changeBoard(move string, color string, board *[][]string) {
