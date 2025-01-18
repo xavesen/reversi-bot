@@ -2,10 +2,14 @@ package main
 
 import (
 	"fmt"
+	"maps"
 	"strconv"
 )
 
  const aInANCII = 97
+ const green = "\033[32m" 
+ const yellow = "\033[33m" 
+ var reset = "\033[0m" 
 
  func main() {
 	board := [][]string{
@@ -30,8 +34,8 @@ import (
 	}
 
 	printBoard(board)
-	changeBoard("f5", "x", directions, &board)
-	printBoard(board)
+	changed := changeBoard("f5", "x", directions, &board)
+	printMoveResult(board, []int{4, 5}, changed)
  }
 
  func printBoard(board [][]string) {
@@ -44,6 +48,27 @@ import (
 		}
 		fmt.Println()
 	}
+ }
+
+ func printMoveResult(board [][]string, move []int, changed map[[2]int]int) {
+	fmt.Println("  0 1 2 3 4 5 6 7")
+	for i, line := range board {
+		fmt.Print(i, " ")
+		for j, square := range line {
+			if i == move[0] && j == move[1] {
+				fmt.Print(green + square + reset + " ")
+			} else {
+				_, ok := changed[[2]int{i, j}]
+				if ok {
+					fmt.Print(yellow + square + reset + " ")
+				} else {
+					fmt.Print(square + " ")
+				}
+			}
+		}
+		fmt.Println()
+	}
+
  }
 
  func findLegalMoves(directions [][]int, color string, board *[][]string) [][]int {
@@ -90,11 +115,12 @@ import (
 	return false
  }
 
- func changeBoard(move string, color string, directions [][]int, board *[][]string) {
+ func changeBoard(move string, color string, directions [][]int, board *[][]string) map[[2]int]int {
 	fmt.Println(move)
 	var i, j, iPlus, jPlus int
 	var opponentInBetween bool
 	var square string
+	changed := map[[2]int]int{}
 
 	indexes := algToInd(move)
 	ind1 := indexes[0]
@@ -118,25 +144,31 @@ import (
 				i += iPlus
 				j += jPlus
 			} else if opponentInBetween {
-				recolorSquares(indexes, []int{i, j}, direction, color, board)
+				maps.Copy(changed, recolorSquares(indexes, []int{i, j}, direction, color, board))
 				break
 			} else {
 				break
 			}
 		}
 	}
+
+	return changed
  }
 
-func recolorSquares(from []int, to []int, direction []int, color string, board* [][]string) {
+func recolorSquares(from []int, to []int, direction []int, color string, board* [][]string) map[[2]int]int{
 	fmt.Printf("recoloring from %v to %v, dir %v\n", from, to, direction)
 	currI := from[0]
 	currJ := from[1]
+	changed := map[[2]int]int{}
 
 	for currI != to[0] || currJ != to[1] {
 		(*board)[currI][currJ] = color
+		changed[[2]int{currI, currJ}] = 1
 		currI += direction[0]
 		currJ += direction[1]
 	}
+
+	return changed
 }
 
  func algToInd(alg string) []int {
