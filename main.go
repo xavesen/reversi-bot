@@ -116,7 +116,6 @@ import (
  }
 
  func changeBoard(move string, color string, directions [][]int, board *[][]string) map[[2]int]int {
-	fmt.Println(move)
 	var i, j, iPlus, jPlus int
 	var opponentInBetween bool
 	var square string
@@ -156,7 +155,6 @@ import (
  }
 
 func recolorSquares(from []int, to []int, direction []int, color string, board* [][]string) map[[2]int]int{
-	fmt.Printf("recoloring from %v to %v, dir %v\n", from, to, direction)
 	currI := from[0]
 	currJ := from[1]
 	changed := map[[2]int]int{}
