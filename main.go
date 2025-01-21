@@ -6,22 +6,29 @@ import (
 	"strconv"
 )
 
-const aInANCII = 97
-const green = "\033[32m"
-const yellow = "\033[33m"
+const (
+	aInANCII = 97
+	green = "\033[32m"
+	yellow = "\033[33m"
+	reset = "\033[0m"
+)
 
-var reset = "\033[0m"
+const(
+	empty int = iota
+	black = iota
+	white = iota
+)
 
 func main() {
-	board := [][]string{
-		{".", ".", ".", ".", ".", ".", ".", "."},
-		{".", ".", ".", ".", ".", ".", ".", "."},
-		{".", ".", ".", ".", ".", ".", ".", "."},
-		{".", ".", ".", "o", "x", ".", ".", "."},
-		{".", ".", ".", "x", "o", ".", ".", "."},
-		{".", ".", ".", ".", ".", ".", ".", "."},
-		{".", ".", ".", ".", ".", ".", ".", "."},
-		{".", ".", ".", ".", ".", ".", ".", "."},
+	board := [][]int{
+		{0, 0, 0, 0, 0, 0, 0, 0},
+		{0, 0, 0, 0, 0, 0, 0, 0},
+		{0, 0, 0, 0, 0, 0, 0, 0},
+		{0, 0, 0, 2, 1, 0, 0, 0},
+		{0, 0, 0, 1, 2, 0, 0, 0},
+		{0, 0, 0, 0, 0, 0, 0, 0},
+		{0, 0, 0, 0, 0, 0, 0, 0},
+		{0, 0, 0, 0, 0, 0, 0, 0},
 	}
 	directions := [][]int{
 		{0, 1},   // right
@@ -33,37 +40,42 @@ func main() {
 		{-1, 1},  // down right
 		{-1, -1}, // down left
 	}
+	colors := map[int]string{
+		0: ".",
+		1: "x",
+		2: "o",
+	}
 
-	printBoard(board)
-	changed := changeBoard("f5", "x", directions, &board)
-	printMoveResult(board, []int{4, 5}, changed)
+	printBoard(&board, colors)
+	changed := changeBoard("f5", black, directions, &board)
+	printMoveResult(&board, []int{4, 5}, changed, colors)
 }
 
-func printBoard(board [][]string) {
+func printBoard(board *[][]int, colors map[int]string) {
 	fmt.Println("  0 1 2 3 4 5 6 7")
-	for i, line := range board {
+	for i, line := range *board {
 		fmt.Print(i, " ")
 		for _, square := range line {
-			fmt.Print(square)
+			fmt.Print(colors[square])
 			fmt.Print(" ")
 		}
 		fmt.Println()
 	}
 }
 
-func printMoveResult(board [][]string, move []int, changed map[[2]int]int) {
+func printMoveResult(board *[][]int, move []int, changed map[[2]int]int, colors map[int]string) {
 	fmt.Println("  0 1 2 3 4 5 6 7")
-	for i, line := range board {
+	for i, line := range *board {
 		fmt.Print(i, " ")
 		for j, square := range line {
 			if i == move[0] && j == move[1] {
-				fmt.Print(green + square + reset + " ")
+				fmt.Print(green + colors[square] + reset + " ")
 			} else {
 				_, ok := changed[[2]int{i, j}]
 				if ok {
-					fmt.Print(yellow + square + reset + " ")
+					fmt.Print(yellow + colors[square] + reset + " ")
 				} else {
-					fmt.Print(square + " ")
+					fmt.Print(colors[square] + " ")
 				}
 			}
 		}
@@ -72,12 +84,12 @@ func printMoveResult(board [][]string, move []int, changed map[[2]int]int) {
 
 }
 
-func findLegalMoves(directions [][]int, color string, board *[][]string) [][]int {
+func findLegalMoves(directions [][]int, color int, board *[][]int) [][]int {
 	var legalMoves [][]int
 
 	for i, row := range *board {
 		for j, square := range row {
-			if square == "." && isLegalMove(directions, i, j, color, board) {
+			if square == empty && isLegalMove(directions, i, j, color, board) {
 				legalMoves = append(legalMoves, []int{i, j})
 			}
 		}
@@ -86,7 +98,7 @@ func findLegalMoves(directions [][]int, color string, board *[][]string) [][]int
 	return legalMoves
 }
 
-func isLegalMove(directions [][]int, ind1 int, ind2 int, color string, board *[][]string) bool {
+func isLegalMove(directions [][]int, ind1 int, ind2 int, color int, board *[][]int) bool {
 	var iPlus, jPlus, i, j int
 	var opponentInBetween bool
 
@@ -99,7 +111,7 @@ func isLegalMove(directions [][]int, ind1 int, ind2 int, color string, board *[]
 
 		for i >= 0 && i <= 7 && j >= 0 && j <= 7 {
 			square := (*board)[i][j]
-			if square == "." {
+			if square == empty {
 				break
 			} else if square != color {
 				opponentInBetween = true
@@ -116,10 +128,10 @@ func isLegalMove(directions [][]int, ind1 int, ind2 int, color string, board *[]
 	return false
 }
 
-func changeBoard(move string, color string, directions [][]int, board *[][]string) map[[2]int]int {
+func changeBoard(move string, color int, directions [][]int, board *[][]int) map[[2]int]int {
 	var i, j, iPlus, jPlus int
 	var opponentInBetween bool
-	var square string
+	var square int
 	changed := map[[2]int]int{}
 
 	indexes := algToInd(move)
@@ -137,7 +149,7 @@ func changeBoard(move string, color string, directions [][]int, board *[][]strin
 		for i >= 0 && i <= 7 && j >= 0 && j <= 7 {
 			square = (*board)[i][j]
 
-			if square == "." {
+			if square == empty {
 				break
 			} else if square != color {
 				opponentInBetween = true
@@ -155,7 +167,7 @@ func changeBoard(move string, color string, directions [][]int, board *[][]strin
 	return changed
 }
 
-func recolorSquares(from []int, to []int, direction []int, color string, board *[][]string) map[[2]int]int {
+func recolorSquares(from []int, to []int, direction []int, color int, board *[][]int) map[[2]int]int {
 	currI := from[0]
 	currJ := from[1]
 	changed := map[[2]int]int{}
