@@ -84,7 +84,7 @@ func printMoveResult(board *[][]int, move []int, changed map[[2]int]int, colors 
 
 }
 
-func findLegalMoves(directions [][]int, color int, board *[][]int) [][]int {
+func findLegalMoves(directions [][]int, color int, board *[][]int) ([][]int, bool) {
 	var legalMoves [][]int
 
 	for i, row := range *board {
@@ -95,7 +95,26 @@ func findLegalMoves(directions [][]int, color int, board *[][]int) [][]int {
 		}
 	}
 
-	return legalMoves
+	if len(legalMoves) == 0 {
+		var opponentColor int
+		if color == black {
+			opponentColor = white
+		} else {
+			opponentColor = black
+		}
+
+		for i, row := range *board {
+			for j, square := range row {
+				if square == empty && isLegalMove(directions, i, j, opponentColor, board) {
+					return legalMoves, false
+				}
+			}
+		}
+
+		return legalMoves, true
+	} else {
+		return legalMoves, false
+	}
 }
 
 func isLegalMove(directions [][]int, ind1 int, ind2 int, color int, board *[][]int) bool {
