@@ -46,9 +46,29 @@ func main() {
 		2: "o",
 	}
 
-	printBoard(&board, colors)
-	changed := changeBoard("f5", black, directions, &board)
-	printMoveResult(&board, []int{4, 5}, changed, colors)
+	localGame(colors, directions, &board)
+}
+
+func localGame(colors map[int]string, directions [][]int, board *[][]int) {
+	printBoard(board, colors)
+	isBlack := false
+	
+	for {
+		isBlack = !isBlack
+		color, _ := getColor(isBlack)
+		legalMoves, gameOver := findLegalMoves(directions, isBlack, board)
+		if gameOver {
+			break
+		} else if len(legalMoves) == 0 {
+			continue
+		}
+
+		alpha := -1000000
+		beta := 1000000
+		_, move := minimax(4, board, isBlack, isBlack, alpha, beta, directions)
+		changes := changeBoard(move, color, directions, board)
+		printMoveResult(board, move, changes, colors)
+	}
 }
 
 func printBoard(board *[][]int, colors map[int]string) {
@@ -84,8 +104,109 @@ func printMoveResult(board *[][]int, move []int, changed map[[2]int]int, colors 
 
 }
 
-func findLegalMoves(directions [][]int, color int, board *[][]int) ([][]int, bool) {
+// func bestMove(depth int, directions [][]int, isBlack bool, isMaximizing bool, board *[][]int) ([][]int, bool) {
+// 	legalMoves, gameOver := findLegalMoves(directions, isBlack, board)
+// 	if len(legalMoves) == 0 {
+// 		return nil, gameOver
+// 	}
+
+// 	bestScore := -64
+// 	bestMove := 
+// 	for _, move := range legalMoves {
+		
+// 	}
+// }
+
+func evaluateBoardState(board *[][]int) int {
+	blackCount := 0
+	whiteCount := 0
+
+	for _, line := range *board {
+		for _, square := range line {
+			if square == black {
+				blackCount ++
+			} else if square == white {
+				whiteCount ++
+			}
+		}
+	}
+
+	return blackCount - whiteCount
+}
+
+func getColor(isBlack bool) (int, int) {
+	if isBlack {
+		return black, 1
+	} else {
+		return white, -1
+	}
+}
+
+func copyBoard(board *[][]int) *[][]int {
+	duplicate := make([][]int, len(*board))
+
+	for i := range *board {
+		duplicate[i] = make([]int, len((*board)[i]))
+		copy(duplicate[i], (*board)[i])
+	}
+
+	return &duplicate
+}
+
+func minimax(depth int, board *[][]int, isBlack bool, isMaximizing bool, alpha int, beta int, directions [][]int) (int, []int) {
+	color, _ := getColor(isBlack)
+
+	legalMoves, gameOver := findLegalMoves(directions, isBlack, board)
+	if gameOver {
+		return evaluateBoardState(board) * 1000, nil
+	}
+	if depth == 0 {
+		return evaluateBoardState(board), nil
+	}
+
+	bestScore := -100000
+	bestOrigScore := 0
+	localAlpha := alpha
+	localBeta := beta
+	bestMove := []int{}
+	var score int
+
+	for _, move := range legalMoves {
+		duplicateBoard := copyBoard(board)
+		changeBoard(move, color, directions, duplicateBoard)
+		origScore, _ := minimax(depth - 1, duplicateBoard, !isBlack, !isMaximizing, localAlpha, localBeta, directions)
+		if !isMaximizing {
+			score = -1 * origScore
+		} else {
+			score = origScore
+		}
+		if score > bestScore {
+			bestScore = score
+			bestOrigScore = origScore
+			bestMove = move
+
+			if !isBlack {
+				if origScore < localAlpha {
+					return origScore, move
+				} else {
+					localBeta = origScore
+				}
+			} else {
+				if origScore > localBeta {
+					return origScore, move
+				} else {
+					 localAlpha = origScore
+				}
+			}
+		}
+	}
+
+	return bestOrigScore, bestMove
+}
+
+func findLegalMoves(directions [][]int, isBlack bool, board *[][]int) ([][]int, bool) {
 	var legalMoves [][]int
+	color, _ := getColor(isBlack)
 
 	for i, row := range *board {
 		for j, square := range row {
@@ -96,12 +217,7 @@ func findLegalMoves(directions [][]int, color int, board *[][]int) ([][]int, boo
 	}
 
 	if len(legalMoves) == 0 {
-		var opponentColor int
-		if color == black {
-			opponentColor = white
-		} else {
-			opponentColor = black
-		}
+		opponentColor, _ := getColor(!isBlack)
 
 		for i, row := range *board {
 			for j, square := range row {
@@ -147,15 +263,14 @@ func isLegalMove(directions [][]int, ind1 int, ind2 int, color int, board *[][]i
 	return false
 }
 
-func changeBoard(move string, color int, directions [][]int, board *[][]int) map[[2]int]int {
+func changeBoard(move []int, color int, directions [][]int, board *[][]int) map[[2]int]int {
 	var i, j, iPlus, jPlus int
 	var opponentInBetween bool
 	var square int
 	changed := map[[2]int]int{}
 
-	indexes := algToInd(move)
-	ind1 := indexes[0]
-	ind2 := indexes[1]
+	ind1 := move[0]
+	ind2 := move[1]
 	(*board)[ind1][ind2] = color
 
 	for _, direction := range directions {
@@ -175,7 +290,7 @@ func changeBoard(move string, color int, directions [][]int, board *[][]int) map
 				i += iPlus
 				j += jPlus
 			} else if opponentInBetween {
-				maps.Copy(changed, recolorSquares(indexes, []int{i, j}, direction, color, board))
+				maps.Copy(changed, recolorSquares(move, []int{i, j}, direction, color, board))
 				break
 			} else {
 				break
