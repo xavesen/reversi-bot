@@ -2,334 +2,51 @@ package main
 
 import (
 	"fmt"
-	"maps"
 	"strconv"
 )
 
 const (
-	aInANCII = 97
-	green = "\033[32m"
-	yellow = "\033[33m"
+	//green = "\033[32m"
+	//yellow = "\033[33m"
+	blue = "\033[34m"
 	reset = "\033[0m"
 )
 
-const(
-	empty int = iota
-	black = iota
-	white = iota
-)
+type GameState struct {
+	White uint64
+	Black uint64
+}
 
 func main() {
-	board := [][]int{
-		{0, 0, 0, 0, 0, 0, 0, 0},
-		{0, 0, 0, 0, 0, 0, 0, 0},
-		{0, 0, 0, 0, 0, 0, 0, 0},
-		{0, 0, 0, 2, 1, 0, 0, 0},
-		{0, 0, 0, 1, 2, 0, 0, 0},
-		{0, 0, 0, 0, 0, 0, 0, 0},
-		{0, 0, 0, 0, 0, 0, 0, 0},
-		{0, 0, 0, 0, 0, 0, 0, 0},
+	game := GameState{
+		White: 62976,
+		Black: 246,
 	}
-	directions := [][]int{
-		{0, 1},   // right
-		{0, -1},  // left
-		{1, 0},   // up
-		{-1, 0},  // down
-		{1, 1},   // up right
-		{1, -1},  // up left
-		{-1, 1},  // down right
-		{-1, -1}, // down left
-	}
-	colors := map[int]string{
-		0: ".",
-		1: "x",
-		2: "o",
-	}
-
-	localGame(colors, directions, &board)
+	printBoard(&game)
 }
 
-func localGame(colors map[int]string, directions [][]int, board *[][]int) {
-	printBoard(board, colors)
-	isBlack := false
+func printBoard(game *GameState) {
+	var bitMask uint64 = 1
+	var j = 0
+	var i = 0
+	result := blue + "  0 1 2 3 4 5 6 7\n0 " + reset
 	
-	for {
-		isBlack = !isBlack
-		color, _ := getColor(isBlack)
-		legalMoves, gameOver := findLegalMoves(directions, isBlack, board)
-		if gameOver {
-			break
-		} else if len(legalMoves) == 0 {
-			continue
+	for bitMask != 0 {
+		if j == 8 {
+			j = 0
+			i ++
+			result += "\n" + blue + strconv.Itoa(i) + reset + " "
 		}
-
-		alpha := -1000000
-		beta := 1000000
-		_, move := minimax(4, board, isBlack, isBlack, alpha, beta, directions)
-		changes := changeBoard(move, color, directions, board)
-		printMoveResult(board, move, changes, colors)
-	}
-}
-
-func printBoard(board *[][]int, colors map[int]string) {
-	fmt.Println("  0 1 2 3 4 5 6 7")
-	for i, line := range *board {
-		fmt.Print(i, " ")
-		for _, square := range line {
-			fmt.Print(colors[square])
-			fmt.Print(" ")
-		}
-		fmt.Println()
-	}
-}
-
-func printMoveResult(board *[][]int, move []int, changed map[[2]int]int, colors map[int]string) {
-	fmt.Println("  0 1 2 3 4 5 6 7")
-	for i, line := range *board {
-		fmt.Print(i, " ")
-		for j, square := range line {
-			if i == move[0] && j == move[1] {
-				fmt.Print(green + colors[square] + reset + " ")
-			} else {
-				_, ok := changed[[2]int{i, j}]
-				if ok {
-					fmt.Print(yellow + colors[square] + reset + " ")
-				} else {
-					fmt.Print(colors[square] + " ")
-				}
-			}
-		}
-		fmt.Println()
-	}
-
-}
-
-// func bestMove(depth int, directions [][]int, isBlack bool, isMaximizing bool, board *[][]int) ([][]int, bool) {
-// 	legalMoves, gameOver := findLegalMoves(directions, isBlack, board)
-// 	if len(legalMoves) == 0 {
-// 		return nil, gameOver
-// 	}
-
-// 	bestScore := -64
-// 	bestMove := 
-// 	for _, move := range legalMoves {
-		
-// 	}
-// }
-
-func evaluateBoardState(board *[][]int) int {
-	blackCount := 0
-	whiteCount := 0
-
-	for _, line := range *board {
-		for _, square := range line {
-			if square == black {
-				blackCount ++
-			} else if square == white {
-				whiteCount ++
-			}
-		}
-	}
-
-	return blackCount - whiteCount
-}
-
-func getColor(isBlack bool) (int, int) {
-	if isBlack {
-		return black, 1
-	} else {
-		return white, -1
-	}
-}
-
-func copyBoard(board *[][]int) *[][]int {
-	duplicate := make([][]int, len(*board))
-
-	for i := range *board {
-		duplicate[i] = make([]int, len((*board)[i]))
-		copy(duplicate[i], (*board)[i])
-	}
-
-	return &duplicate
-}
-
-func minimax(depth int, board *[][]int, isBlack bool, isMaximizing bool, alpha int, beta int, directions [][]int) (int, []int) {
-	color, _ := getColor(isBlack)
-
-	legalMoves, gameOver := findLegalMoves(directions, isBlack, board)
-	if gameOver {
-		return evaluateBoardState(board) * 1000, nil
-	}
-	if depth == 0 {
-		return evaluateBoardState(board), nil
-	}
-
-	bestScore := -100000
-	bestOrigScore := 0
-	localAlpha := alpha
-	localBeta := beta
-	bestMove := []int{}
-	var score int
-
-	for _, move := range legalMoves {
-		duplicateBoard := copyBoard(board)
-		changeBoard(move, color, directions, duplicateBoard)
-		origScore, _ := minimax(depth - 1, duplicateBoard, !isBlack, !isMaximizing, localAlpha, localBeta, directions)
-		if !isMaximizing {
-			score = -1 * origScore
+		if bitMask & game.Black != 0 {
+			result += "x "
+		} else if bitMask & game.White != 0 {
+			result += "o "
 		} else {
-			score = origScore
+			result += ". "
 		}
-		if score > bestScore {
-			bestScore = score
-			bestOrigScore = origScore
-			bestMove = move
-
-			if !isBlack {
-				if origScore < localAlpha {
-					return origScore, move
-				} else {
-					localBeta = origScore
-				}
-			} else {
-				if origScore > localBeta {
-					return origScore, move
-				} else {
-					 localAlpha = origScore
-				}
-			}
-		}
+		bitMask <<= 1
+		j++
 	}
 
-	return bestOrigScore, bestMove
-}
-
-func findLegalMoves(directions [][]int, isBlack bool, board *[][]int) ([][]int, bool) {
-	var legalMoves [][]int
-	color, _ := getColor(isBlack)
-
-	for i, row := range *board {
-		for j, square := range row {
-			if square == empty && isLegalMove(directions, i, j, color, board) {
-				legalMoves = append(legalMoves, []int{i, j})
-			}
-		}
-	}
-
-	if len(legalMoves) == 0 {
-		opponentColor, _ := getColor(!isBlack)
-
-		for i, row := range *board {
-			for j, square := range row {
-				if square == empty && isLegalMove(directions, i, j, opponentColor, board) {
-					return legalMoves, false
-				}
-			}
-		}
-
-		return legalMoves, true
-	} else {
-		return legalMoves, false
-	}
-}
-
-func isLegalMove(directions [][]int, ind1 int, ind2 int, color int, board *[][]int) bool {
-	var iPlus, jPlus, i, j int
-	var opponentInBetween bool
-
-	for _, direction := range directions {
-		iPlus = direction[0]
-		jPlus = direction[1]
-		i = ind1 + iPlus
-		j = ind2 + jPlus
-		opponentInBetween = false
-
-		for i >= 0 && i <= 7 && j >= 0 && j <= 7 {
-			square := (*board)[i][j]
-			if square == empty {
-				break
-			} else if square != color {
-				opponentInBetween = true
-				i += iPlus
-				j += jPlus
-			} else if opponentInBetween {
-				return true
-			} else {
-				break
-			}
-		}
-	}
-
-	return false
-}
-
-func changeBoard(move []int, color int, directions [][]int, board *[][]int) map[[2]int]int {
-	var i, j, iPlus, jPlus int
-	var opponentInBetween bool
-	var square int
-	changed := map[[2]int]int{}
-
-	ind1 := move[0]
-	ind2 := move[1]
-	(*board)[ind1][ind2] = color
-
-	for _, direction := range directions {
-		iPlus = direction[0]
-		jPlus = direction[1]
-		i = ind1 + iPlus
-		j = ind2 + jPlus
-		opponentInBetween = false
-
-		for i >= 0 && i <= 7 && j >= 0 && j <= 7 {
-			square = (*board)[i][j]
-
-			if square == empty {
-				break
-			} else if square != color {
-				opponentInBetween = true
-				i += iPlus
-				j += jPlus
-			} else if opponentInBetween {
-				maps.Copy(changed, recolorSquares(move, []int{i, j}, direction, color, board))
-				break
-			} else {
-				break
-			}
-		}
-	}
-
-	return changed
-}
-
-func recolorSquares(from []int, to []int, direction []int, color int, board *[][]int) map[[2]int]int {
-	currI := from[0]
-	currJ := from[1]
-	changed := map[[2]int]int{}
-
-	for currI != to[0] || currJ != to[1] {
-		(*board)[currI][currJ] = color
-		changed[[2]int{currI, currJ}] = 1
-		currI += direction[0]
-		currJ += direction[1]
-	}
-
-	return changed
-}
-
-func algToInd(alg string) []int {
-	letter := alg[0]
-	number := string(alg[1])
-
-	intNumber, _ := strconv.Atoi(number)
-	firstInd := intNumber - 1
-	secondInd := letter - aInANCII
-
-	return []int{firstInd, int(secondInd)}
-}
-
-func IndToAlg(ind1 int, ind2 int) string {
-	number := strconv.Itoa(ind1 + 1)
-	letter := string(rune(aInANCII + ind2))
-
-	return letter + number
+	fmt.Println(result)
 }
