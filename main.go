@@ -19,10 +19,11 @@ type GameState struct {
 
 func main() {
 	game := GameState{
-		White: 62976,
-		Black: 246,
+		White: 68853694464,
+		Black: 34628173824,
 	}
 	printBoard(&game)
+	fmt.Println(evaluateGameState(&game))
 }
 
 func printBoard(game *GameState) {
@@ -49,4 +50,22 @@ func printBoard(game *GameState) {
 	}
 
 	fmt.Println(result)
+}
+
+func countSetBits(n uint64) int {
+	count := 0
+	curr := n
+
+	for curr != 0 {
+		if curr & 1 != 0 {
+			count++
+		}
+		curr = curr >> 1
+	}
+
+	return count
+}
+
+func evaluateGameState(game *GameState) int {
+	return countSetBits(game.White) - countSetBits(game.Black)
 }
