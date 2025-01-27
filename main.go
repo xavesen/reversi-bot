@@ -30,7 +30,7 @@ func main() {
 		IsBlack: true,
 	}
 	directions := []func(uint64)uint64{shiftN, shiftNe, shiftE, shiftSe, shiftS, shiftSw, shiftW, shiftNw}
-	changeBoard(algToBit("f5"), &directions, &game)
+	changeBoard(algToBit("f5"), true, &directions, &game)
 	printBoard(&game)
 }
 
@@ -76,6 +76,32 @@ func countSetBits(n uint64) int {
 	return count
 }
 
+func findLegalMoves(isBlack bool, directions *[]func(uint64)uint64, game *GameState) uint64 {
+	var currColor uint64
+	var oppColor uint64
+	var legalMoves uint64 = 0
+
+	if isBlack {
+		currColor = game.Black
+		oppColor = game.White
+	} else {
+		currColor = game.White
+		oppColor = game.Black
+	}
+
+	emptySquares := ^(currColor|oppColor)
+	
+	var currPos uint64 = 1
+	for currPos != 0x8000000000000000 {
+		if currPos & emptySquares != 0 && checkRecolor(currPos, currColor, oppColor, directions) != 0 {
+			legalMoves |= currPos
+		}
+		currPos <<= 1
+	}
+
+	return legalMoves
+}
+
 func evaluateGameState(game *GameState) int {
 	return countSetBits(game.White) - countSetBits(game.Black)
 }
@@ -89,14 +115,33 @@ func algToBit(alg string) uint64 {
 	return result << uint64(bitsToMove)
 }
 
-func changeBoard(move uint64, directions *[]func(uint64)uint64, game *GameState) {
-	var currColor *uint64
-	var oppColor *uint64
+func checkRecolor(move uint64, currColor uint64, oppColor uint64, directions *[]func(uint64)uint64) uint64 {
 	var recolorBit uint64
 	var allRecolorBits uint64
 	var currRecolorBits uint64
+
+	for _, shift := range *directions {
+		recolorBit = shift(move)
+		currRecolorBits = 0
+
+		for oppColor & recolorBit != 0 {
+			currRecolorBits |= recolorBit
+			recolorBit = shift(recolorBit)
+		}
+
+		if currRecolorBits != 0 && currColor & recolorBit != 0 {
+			allRecolorBits |= currRecolorBits
+		}
+	}
+
+	return allRecolorBits
+}
+
+func changeBoard(move uint64, isBlack bool, directions *[]func(uint64)uint64, game *GameState) {
+	var currColor *uint64
+	var oppColor *uint64
 	
-	if game.IsBlack {
+	if isBlack {
 		currColor = &game.Black
 		oppColor = &game.White
 	} else {
@@ -106,21 +151,7 @@ func changeBoard(move uint64, directions *[]func(uint64)uint64, game *GameState)
 
 	game.LastMove = move
 	*currColor |= move
-
-	for _, shift := range *directions {
-		recolorBit = shift(move)
-		currRecolorBits = 0
-
-		for *oppColor & recolorBit != 0 {
-			currRecolorBits |= recolorBit
-			recolorBit = shift(recolorBit)
-		}
-
-		if currRecolorBits != 0 && *currColor & recolorBit != 0 {
-			allRecolorBits |= currRecolorBits
-		}
-	}
-
+	allRecolorBits := checkRecolor(move, *currColor, *oppColor, directions)
 	*currColor |= allRecolorBits
 	*oppColor ^= allRecolorBits
 	game.IsBlack = !game.IsBlack
