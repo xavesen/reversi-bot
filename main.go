@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"maps"
 	"strconv"
 )
 
@@ -10,171 +9,216 @@ const (
 	aInANCII = 97
 	green = "\033[32m"
 	yellow = "\033[33m"
+	blue = "\033[34m"
 	reset = "\033[0m"
+	notAFile uint64 = 0xfefefefefefefefe
+	notHFile uint64 = 0x7f7f7f7f7f7f7f7f
+	leftBitSet uint64 = 0x8000000000000000
+	maxUint64 uint64 = 0xffffffffffffffff
+	gameContinues uint64 = maxUint64
+	gameOverDraw uint64 = maxUint64 - 1
+	gameOverBlackWon uint64 = maxUint64 - 2
+	gameOverWhiteWon uint64 = maxUint64 - 3
 )
 
-const(
-	empty int = iota
-	black = iota
-	white = iota
-)
-
-func main() {
-	board := [][]int{
-		{0, 0, 0, 0, 0, 0, 0, 0},
-		{0, 0, 0, 0, 0, 0, 0, 0},
-		{0, 0, 0, 0, 0, 0, 0, 0},
-		{0, 0, 0, 2, 1, 0, 0, 0},
-		{0, 0, 0, 1, 2, 0, 0, 0},
-		{0, 0, 0, 0, 0, 0, 0, 0},
-		{0, 0, 0, 0, 0, 0, 0, 0},
-		{0, 0, 0, 0, 0, 0, 0, 0},
-	}
-	directions := [][]int{
-		{0, 1},   // right
-		{0, -1},  // left
-		{1, 0},   // up
-		{-1, 0},  // down
-		{1, 1},   // up right
-		{1, -1},  // up left
-		{-1, 1},  // down right
-		{-1, -1}, // down left
-	}
-	colors := map[int]string{
-		0: ".",
-		1: "x",
-		2: "o",
-	}
-
-	localGame(colors, directions, &board)
+type GameState struct {
+	White uint64
+	Black uint64
+	IsBlack bool
+	LastMove uint64
+	LastRecolors uint64
 }
 
-func localGame(colors map[int]string, directions [][]int, board *[][]int) {
-	printBoard(board, colors)
-	isBlack := false
-	
-	for {
-		isBlack = !isBlack
-		color, _ := getColor(isBlack)
-		legalMoves, gameOver := findLegalMoves(directions, isBlack, board)
-		if gameOver {
-			break
-		} else if len(legalMoves) == 0 {
+func main() {
+	game := GameState{
+		White: 68853694464,
+		Black: 34628173824,
+		IsBlack: true,
+	}
+	directions := []func(uint64)uint64{shiftN, shiftNe, shiftE, shiftSe, shiftS, shiftSw, shiftW, shiftNw}
+	localGame(&directions, &game)
+}
+
+func localGame(directions *[]func(uint64)uint64, game *GameState) {
+	printBoard(game, false)
+	gameOver := false
+
+	for !gameOver {
+		switch result := findLegalMoves(directions, game); result {
+		case gameOverBlackWon:
+			fmt.Println("Game over, black won")
+			gameOver = true
+			continue
+		case gameOverWhiteWon:
+			fmt.Println("Game over, white won")
+			gameOver = true
+			continue
+		case gameOverDraw:
+			fmt.Println("Game over, draw")
+			gameOver = true
+			continue
+		case gameContinues:
+			game.IsBlack = !game.IsBlack
 			continue
 		}
 
 		alpha := -1000000
 		beta := 1000000
-		_, move := minimax(4, board, isBlack, isBlack, alpha, beta, directions)
-		changes := changeBoard(move, color, directions, board)
-		printMoveResult(board, move, changes, colors)
+		_, move := minimax(6, game.IsBlack, alpha, beta, directions, game)
+		changeBoard(move, directions, game)
+		printBoard(game, true)
 	}
 }
 
-func printBoard(board *[][]int, colors map[int]string) {
-	fmt.Println("  0 1 2 3 4 5 6 7")
-	for i, line := range *board {
-		fmt.Print(i, " ")
-		for _, square := range line {
-			fmt.Print(colors[square])
-			fmt.Print(" ")
+func printBoard(game *GameState, withMoveHighlight bool) {
+	var bitMask uint64 = 1
+	var j = 0
+	var i = 0
+	result := blue + "  0 1 2 3 4 5 6 7\n0 " + reset
+	
+	for bitMask != 0 {
+		if j == 8 {
+			j = 0
+			i ++
+			result += blue + strconv.Itoa(i) + "\n" + strconv.Itoa(i) + reset + " "
 		}
-		fmt.Println()
-	}
-}
 
-func printMoveResult(board *[][]int, move []int, changed map[[2]int]int, colors map[int]string) {
-	fmt.Println("  0 1 2 3 4 5 6 7")
-	for i, line := range *board {
-		fmt.Print(i, " ")
-		for j, square := range line {
-			if i == move[0] && j == move[1] {
-				fmt.Print(green + colors[square] + reset + " ")
-			} else {
-				_, ok := changed[[2]int{i, j}]
-				if ok {
-					fmt.Print(yellow + colors[square] + reset + " ")
-				} else {
-					fmt.Print(colors[square] + " ")
-				}
+		colored := false
+		if withMoveHighlight {
+			if bitMask == game.LastMove {
+				result += green
+				colored = true
+			} else if bitMask & game.LastRecolors != 0 {
+				result += yellow
+				colored = true
 			}
 		}
-		fmt.Println()
-	}
-
-}
-
-// func bestMove(depth int, directions [][]int, isBlack bool, isMaximizing bool, board *[][]int) ([][]int, bool) {
-// 	legalMoves, gameOver := findLegalMoves(directions, isBlack, board)
-// 	if len(legalMoves) == 0 {
-// 		return nil, gameOver
-// 	}
-
-// 	bestScore := -64
-// 	bestMove := 
-// 	for _, move := range legalMoves {
 		
-// 	}
-// }
-
-func evaluateBoardState(board *[][]int) int {
-	blackCount := 0
-	whiteCount := 0
-
-	for _, line := range *board {
-		for _, square := range line {
-			if square == black {
-				blackCount ++
-			} else if square == white {
-				whiteCount ++
-			}
+		if bitMask & game.Black != 0 {
+			result += "x "
+		} else if bitMask & game.White != 0 {
+			result += "o "
+		} else {
+			result += ". "
 		}
+
+		if withMoveHighlight && colored {
+			result += reset
+		}
+
+		bitMask <<= 1
+		j++
 	}
 
-	return blackCount - whiteCount
+	result += blue + "8\n" + "  a b c d e f g h" + reset
+
+	fmt.Println(result)
 }
 
-func getColor(isBlack bool) (int, int) {
-	if isBlack {
-		return black, 1
+func countSetBits(n uint64) int {
+	count := 0
+	curr := n
+
+	for curr != 0 {
+		if curr & 1 != 0 {
+			count++
+		}
+		curr = curr >> 1
+	}
+
+	return count
+}
+
+func findFirstSetBit(n uint64) uint64 {
+	var currBit uint64 = 1
+	for {
+		if currBit & n != 0 {
+			return currBit
+		}
+		currBit <<= 1
+	}
+}
+
+func findLegalMoves(directions *[]func(uint64)uint64, game *GameState) uint64 {
+	var currColor uint64
+	var oppColor uint64
+	var legalMoves uint64 = 0
+
+	if game.IsBlack {
+		currColor = game.Black
+		oppColor = game.White
 	} else {
-		return white, -1
+		currColor = game.White
+		oppColor = game.Black
+	}
+
+	emptySquares := ^(currColor|oppColor)
+	
+	var currPos uint64 = 1
+	for currPos != leftBitSet {
+		if currPos & emptySquares != 0 && checkRecolor(currPos, currColor, oppColor, directions) != 0 {
+			legalMoves |= currPos
+		}
+		currPos <<= 1
+	}
+
+	if legalMoves == 0 {
+		currPos = 1
+		for currPos != leftBitSet {
+			if currPos & emptySquares != 0 && checkRecolor(currPos, oppColor, currColor, directions) != 0 {
+				return gameContinues
+			}
+			currPos <<= 1
+		}
+		gameResult := evaluateGameState(game)
+		if gameResult > 0 {
+			return gameOverBlackWon
+		} else if gameResult < 0 {
+			return gameOverWhiteWon
+		} else {
+			return gameOverDraw
+		}
+	} else {
+		return legalMoves
 	}
 }
 
-func copyBoard(board *[][]int) *[][]int {
-	duplicate := make([][]int, len(*board))
-
-	for i := range *board {
-		duplicate[i] = make([]int, len((*board)[i]))
-		copy(duplicate[i], (*board)[i])
-	}
-
-	return &duplicate
+func evaluateGameState(game *GameState) int {
+	return countSetBits(game.Black) - countSetBits(game.White)
 }
 
-func minimax(depth int, board *[][]int, isBlack bool, isMaximizing bool, alpha int, beta int, directions [][]int) (int, []int) {
-	color, _ := getColor(isBlack)
-
-	legalMoves, gameOver := findLegalMoves(directions, isBlack, board)
-	if gameOver {
-		return evaluateBoardState(board) * 1000, nil
+func minimax(depth int, isMaximizing bool, alpha int, beta int, directions *[]func(uint64)uint64, game *GameState) (int, uint64) {
+	result := findLegalMoves(directions, game)
+	switch result {
+	case gameOverBlackWon:
+		return 10000, 0
+	case gameOverWhiteWon:
+		return -10000, 0
+	case gameOverDraw:
+		return 0, 0
+	case gameContinues:
+		newGame := game
+		newGame.IsBlack = !newGame.IsBlack
+		score, _ := minimax(depth, !isMaximizing, alpha, beta, directions, newGame)
+		return score, 0
 	}
 	if depth == 0 {
-		return evaluateBoardState(board), nil
+		return evaluateGameState(game), 0
 	}
 
 	bestScore := -100000
 	bestOrigScore := 0
 	localAlpha := alpha
 	localBeta := beta
-	bestMove := []int{}
+	var bestMove uint64 = 0
 	var score int
 
-	for _, move := range legalMoves {
-		duplicateBoard := copyBoard(board)
-		changeBoard(move, color, directions, duplicateBoard)
-		origScore, _ := minimax(depth - 1, duplicateBoard, !isBlack, !isMaximizing, localAlpha, localBeta, directions)
+	for result != 0 {
+		move := findFirstSetBit(result)
+		result &= ^move
+		newGame := *game
+		changeBoard(move, directions, &newGame)
+		origScore, _ := minimax(depth - 1, !isMaximizing, localAlpha, localBeta, directions, &newGame)
 		if !isMaximizing {
 			score = -1 * origScore
 		} else {
@@ -185,7 +229,7 @@ func minimax(depth int, board *[][]int, isBlack bool, isMaximizing bool, alpha i
 			bestOrigScore = origScore
 			bestMove = move
 
-			if !isBlack {
+			if !isMaximizing {
 				if origScore < localAlpha {
 					return origScore, move
 				} else {
@@ -204,132 +248,107 @@ func minimax(depth int, board *[][]int, isBlack bool, isMaximizing bool, alpha i
 	return bestOrigScore, bestMove
 }
 
-func findLegalMoves(directions [][]int, isBlack bool, board *[][]int) ([][]int, bool) {
-	var legalMoves [][]int
-	color, _ := getColor(isBlack)
+func algToBit(alg string) uint64 {
+	var result uint64 = 1
+	file := int(alg[0]) - aInANCII
+	rank, _ := strconv.Atoi(string(alg[1]))
 
-	for i, row := range *board {
-		for j, square := range row {
-			if square == empty && isLegalMove(directions, i, j, color, board) {
-				legalMoves = append(legalMoves, []int{i, j})
-			}
+	bitsToMove := (rank-1) * 8 + file
+	return result << uint64(bitsToMove)
+}
+
+func bitToAlg(move uint64) string {
+	var curr uint64 = 1
+	ind := 0
+
+	for {
+		if curr == move {
+			break
+		}
+		ind += 1
+		curr <<= 1
+	}
+
+	fileI := ind % 8
+	rankI := ind / 8
+
+	rank := strconv.Itoa(int(rankI) + 1)
+	file :=  string(rune(aInANCII + fileI))
+
+	return file+rank
+}
+
+func checkRecolor(move uint64, currColor uint64, oppColor uint64, directions *[]func(uint64)uint64) uint64 {
+	var recolorBit uint64
+	var allRecolorBits uint64
+	var currRecolorBits uint64
+
+	for _, shift := range *directions {
+		recolorBit = shift(move)
+		currRecolorBits = 0
+
+		for oppColor & recolorBit != 0 {
+			currRecolorBits |= recolorBit
+			recolorBit = shift(recolorBit)
+		}
+
+		if currRecolorBits != 0 && currColor & recolorBit != 0 {
+			allRecolorBits |= currRecolorBits
 		}
 	}
 
-	if len(legalMoves) == 0 {
-		opponentColor, _ := getColor(!isBlack)
+	return allRecolorBits
+}
 
-		for i, row := range *board {
-			for j, square := range row {
-				if square == empty && isLegalMove(directions, i, j, opponentColor, board) {
-					return legalMoves, false
-				}
-			}
-		}
-
-		return legalMoves, true
+func changeBoard(move uint64, directions *[]func(uint64)uint64, game *GameState) {
+	var currColor *uint64
+	var oppColor *uint64
+	
+	if game.IsBlack {
+		currColor = &game.Black
+		oppColor = &game.White
 	} else {
-		return legalMoves, false
-	}
-}
-
-func isLegalMove(directions [][]int, ind1 int, ind2 int, color int, board *[][]int) bool {
-	var iPlus, jPlus, i, j int
-	var opponentInBetween bool
-
-	for _, direction := range directions {
-		iPlus = direction[0]
-		jPlus = direction[1]
-		i = ind1 + iPlus
-		j = ind2 + jPlus
-		opponentInBetween = false
-
-		for i >= 0 && i <= 7 && j >= 0 && j <= 7 {
-			square := (*board)[i][j]
-			if square == empty {
-				break
-			} else if square != color {
-				opponentInBetween = true
-				i += iPlus
-				j += jPlus
-			} else if opponentInBetween {
-				return true
-			} else {
-				break
-			}
-		}
+		currColor = &game.White
+		oppColor = &game.Black
 	}
 
-	return false
+	game.LastMove = move
+	*currColor |= move
+	allRecolorBits := checkRecolor(move, *currColor, *oppColor, directions)
+	*currColor |= allRecolorBits
+	*oppColor ^= allRecolorBits
+	game.LastRecolors = allRecolorBits
+	game.IsBlack = !game.IsBlack
 }
 
-func changeBoard(move []int, color int, directions [][]int, board *[][]int) map[[2]int]int {
-	var i, j, iPlus, jPlus int
-	var opponentInBetween bool
-	var square int
-	changed := map[[2]int]int{}
-
-	ind1 := move[0]
-	ind2 := move[1]
-	(*board)[ind1][ind2] = color
-
-	for _, direction := range directions {
-		iPlus = direction[0]
-		jPlus = direction[1]
-		i = ind1 + iPlus
-		j = ind2 + jPlus
-		opponentInBetween = false
-
-		for i >= 0 && i <= 7 && j >= 0 && j <= 7 {
-			square = (*board)[i][j]
-
-			if square == empty {
-				break
-			} else if square != color {
-				opponentInBetween = true
-				i += iPlus
-				j += jPlus
-			} else if opponentInBetween {
-				maps.Copy(changed, recolorSquares(move, []int{i, j}, direction, color, board))
-				break
-			} else {
-				break
-			}
-		}
-	}
-
-	return changed
+func shiftN(bit uint64) uint64 {
+	return bit << 8
 }
 
-func recolorSquares(from []int, to []int, direction []int, color int, board *[][]int) map[[2]int]int {
-	currI := from[0]
-	currJ := from[1]
-	changed := map[[2]int]int{}
-
-	for currI != to[0] || currJ != to[1] {
-		(*board)[currI][currJ] = color
-		changed[[2]int{currI, currJ}] = 1
-		currI += direction[0]
-		currJ += direction[1]
-	}
-
-	return changed
+func shiftNe(bit uint64) uint64 {
+	return bit << 9 & notAFile
 }
 
-func algToInd(alg string) []int {
-	letter := alg[0]
-	number := string(alg[1])
-
-	intNumber, _ := strconv.Atoi(number)
-	firstInd := intNumber - 1
-	secondInd := letter - aInANCII
-
-	return []int{firstInd, int(secondInd)}
+func shiftE(bit uint64) uint64 {
+	return bit << 1 & notAFile
 }
 
-func IndToAlg(ind1 int, ind2 int) string {
-	number := strconv.Itoa(ind1 + 1)
-	letter := string(rune(aInANCII + ind2))
+func shiftSe(bit uint64) uint64 {
+	return bit >> 7 & notAFile
+}
 
-	return letter + number
+func shiftS(bit uint64) uint64 {
+	return bit >> 8
+}
+
+func shiftSw(bit uint64) uint64 {
+	return bit >> 9 & notHFile
+}
+
+func shiftW(bit uint64) uint64 {
+	return bit >> 1 & notHFile
+}
+
+func shiftNw(bit uint64) uint64 {
+	return bit << 7 & notHFile
 }
