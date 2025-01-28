@@ -48,20 +48,23 @@ func localGame(directions *[]func(uint64)uint64, game *GameState) {
 		case gameOverBlackWon:
 			fmt.Println("Game over, black won")
 			gameOver = true
+			continue
 		case gameOverWhiteWon:
 			fmt.Println("Game over, white won")
 			gameOver = true
+			continue
 		case gameOverDraw:
 			fmt.Println("Game over, draw")
 			gameOver = true
+			continue
 		case gameContinues:
+			game.IsBlack = !game.IsBlack
 			continue
 		}
 
 		alpha := -1000000
 		beta := 1000000
-		_, move := minimax(4, game.IsBlack, alpha, beta, directions, game)
-		fmt.Println(bitToAlg(move))
+		_, move := minimax(6, game.IsBlack, alpha, beta, directions, game)
 		changeBoard(move, directions, game)
 		printBoard(game, true)
 	}
