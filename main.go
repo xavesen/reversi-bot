@@ -156,7 +156,7 @@ func findLegalMoves(directions *[]func(uint64)uint64, game *GameState) uint64 {
 	
 	var currPos uint64 = 1
 	for currPos != leftBitSet {
-		if currPos & emptySquares != 0 && checkRecolor(currPos, currColor, oppColor, directions) != 0 {
+		if currPos & emptySquares != 0 && checkRecolor(currPos, currColor, oppColor, directions, true) != 0 {
 			legalMoves |= currPos
 		}
 		currPos <<= 1
@@ -165,7 +165,7 @@ func findLegalMoves(directions *[]func(uint64)uint64, game *GameState) uint64 {
 	if legalMoves == 0 {
 		currPos = 1
 		for currPos != leftBitSet {
-			if currPos & emptySquares != 0 && checkRecolor(currPos, oppColor, currColor, directions) != 0 {
+			if currPos & emptySquares != 0 && checkRecolor(currPos, oppColor, currColor, directions, true) != 0 {
 				return gameContinues
 			}
 			currPos <<= 1
@@ -278,7 +278,7 @@ func bitToAlg(move uint64) string {
 	return file+rank
 }
 
-func checkRecolor(move uint64, currColor uint64, oppColor uint64, directions *[]func(uint64)uint64) uint64 {
+func checkRecolor(move uint64, currColor uint64, oppColor uint64, directions *[]func(uint64)uint64, justCheck bool) uint64 {
 	var recolorBit uint64
 	var allRecolorBits uint64
 	var currRecolorBits uint64
@@ -294,6 +294,9 @@ func checkRecolor(move uint64, currColor uint64, oppColor uint64, directions *[]
 
 		if currRecolorBits != 0 && currColor & recolorBit != 0 {
 			allRecolorBits |= currRecolorBits
+			if justCheck {
+				return allRecolorBits
+			}
 		}
 	}
 
@@ -314,7 +317,7 @@ func changeBoard(move uint64, directions *[]func(uint64)uint64, game *GameState)
 
 	game.LastMove = move
 	*currColor |= move
-	allRecolorBits := checkRecolor(move, *currColor, *oppColor, directions)
+	allRecolorBits := checkRecolor(move, *currColor, *oppColor, directions, false)
 	*currColor |= allRecolorBits
 	*oppColor ^= allRecolorBits
 	game.LastRecolors = allRecolorBits
