@@ -81,12 +81,29 @@ func GetGameList(url string, playerId string) (*models.GameListResponse, error) 
 		return nil, err
 	}
 
-	fmt.Println(string(respBody))
-
 	var responseStruct models.GameListResponse
 	err = json.Unmarshal(respBody, &responseStruct)
 	if err != nil {
 		fmt.Printf("Error parsing API response body while getting game list: %s\n", err)
+		return nil, err
+	}
+
+	return &responseStruct, nil
+}
+
+func JoinGame(url string, playerId string, gameId string) (*models.JoinGameResponse, error) {
+	requestStruct := &models.JoinGameRequest{PlayerId: playerId, GameId: gameId}
+	respBody, err := makeRequest(url, requestStruct)
+	if err != nil {
+		return nil, err
+	}
+
+	fmt.Println(string(respBody))
+
+	var responseStruct models.JoinGameResponse
+	err = json.Unmarshal(respBody, &responseStruct)
+	if err != nil {
+		fmt.Printf("Error parsing API response body while joining game: %s\n", err)
 		return nil, err
 	}
 

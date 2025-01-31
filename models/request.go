@@ -40,3 +40,19 @@ type GameListResponse struct {
 	Error	ErrorContents	`json:"error"`
 	Result 	[]GameInfo		`json:"result"`
 }
+
+type JoinGameRequest struct {
+	PlayerId 	string	`json:"player_id"`
+	GameId		string	`json:"game_id"`
+}
+
+type JoinGameResult struct {
+	Result 	bool	`json:"result"`
+	Color 	string	`json:"color"`
+}
+
+type JoinGameResponse struct {
+	Status	string				`json:"status"`
+	Error	ErrorContents		`json:"error"`
+	Result 	JoinGameResult		`json:"result"`
+}
