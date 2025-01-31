@@ -124,3 +124,20 @@ func GetGameStatus(url string, playerId string, gameId string) (*models.GameStat
 
 	return &responseStruct, nil
 }
+
+func MakeMove(url string, playerId string, gameId string, move string) (*models.MoveResponse, error) {
+	requestStruct := &models.MoveRequest{PlayerId: playerId, GameId: gameId, Move: move}
+	respBody, err := makeRequest(url, requestStruct)
+	if err != nil {
+		return nil, err
+	}
+
+	var responseStruct models.MoveResponse
+	err = json.Unmarshal(respBody, &responseStruct)
+	if err != nil {
+		fmt.Printf("Error parsing API response body while joining game: %s\n", err)
+		return nil, err
+	}
+
+	return &responseStruct, nil
+}

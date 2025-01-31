@@ -72,3 +72,21 @@ type GameStatusResponse struct {
 	Error	ErrorContents		`json:"error"`
 	Result 	GameStatusResult	`json:"result"`
 }
+
+type MoveRequest struct {
+	PlayerId 	string	`json:"player_id"`
+	GameId		string	`json:"game_id"`
+	Move 		string	`json:"move"`
+}
+
+type MoveResult struct {
+	Ok 			bool	`json:"ok"`
+	Continue 	bool	`json:"continue"`
+	Winner 		string	`json:"winner"`
+}
+
+type MoveResponse struct {
+	Status	string				`json:"status"`
+	Error	ErrorContents		`json:"error"`
+	Result 	MoveResult			`json:"result"`
+}
