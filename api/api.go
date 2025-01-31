@@ -98,9 +98,24 @@ func JoinGame(url string, playerId string, gameId string) (*models.JoinGameRespo
 		return nil, err
 	}
 
-	fmt.Println(string(respBody))
-
 	var responseStruct models.JoinGameResponse
+	err = json.Unmarshal(respBody, &responseStruct)
+	if err != nil {
+		fmt.Printf("Error parsing API response body while joining game: %s\n", err)
+		return nil, err
+	}
+
+	return &responseStruct, nil
+}
+
+func GetGameStatus(url string, playerId string, gameId string) (*models.GameStatusResponse, error) {
+	requestStruct := &models.GameStatusRequest{PlayerId: playerId, GameId: gameId}
+	respBody, err := makeRequest(url, requestStruct)
+	if err != nil {
+		return nil, err
+	}
+
+	var responseStruct models.GameStatusResponse
 	err = json.Unmarshal(respBody, &responseStruct)
 	if err != nil {
 		fmt.Printf("Error parsing API response body while joining game: %s\n", err)

@@ -56,3 +56,19 @@ type JoinGameResponse struct {
 	Error	ErrorContents		`json:"error"`
 	Result 	JoinGameResult		`json:"result"`
 }
+
+type GameStatusRequest struct {
+	PlayerId 	string	`json:"player_id"`
+	GameId		string	`json:"game_id"`
+}
+
+type GameStatusResult struct {
+	Status		string	`json:"status"`
+	LastMove	string	`json:"last_move"`
+}
+
+type GameStatusResponse struct {
+	Status	string				`json:"status"`
+	Error	ErrorContents		`json:"error"`
+	Result 	GameStatusResult	`json:"result"`
+}
