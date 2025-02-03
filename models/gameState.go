@@ -13,10 +13,10 @@ const (
 	reset = "\033[0m"
 	leftBitSet uint64 = 0x8000000000000000
 	maxUint64 uint64 = 0xffffffffffffffff
-	gameContinues uint64 = maxUint64
-	gameOverDraw uint64 = maxUint64 - 1
-	gameOverBlackWon uint64 = maxUint64 - 2
-	gameOverWhiteWon uint64 = maxUint64 - 3
+	GameContinues uint64 = maxUint64
+	GameOverDraw uint64 = maxUint64 - 1
+	GameOverBlackWon uint64 = maxUint64 - 2
+	GameOverWhiteWon uint64 = maxUint64 - 3
 )
 
 type GameState struct {
@@ -103,17 +103,17 @@ func (game *GameState) FindLegalMoves(directions *[]func(uint64)uint64) uint64 {
 		currPos = 1
 		for currPos != leftBitSet {
 			if currPos & emptySquares != 0 && checkRecolor(currPos, oppColor, currColor, directions, true) != 0 {
-				return gameContinues
+				return GameContinues
 			}
 			currPos <<= 1
 		}
 		gameResult := game.EvaluateGameState()
 		if gameResult > 0 {
-			return gameOverBlackWon
+			return GameOverBlackWon
 		} else if gameResult < 0 {
-			return gameOverWhiteWon
+			return GameOverWhiteWon
 		} else {
-			return gameOverDraw
+			return GameOverDraw
 		}
 	} else {
 		return legalMoves
